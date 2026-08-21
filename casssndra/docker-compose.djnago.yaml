@@ -1,0 +1,58 @@
+name: django_platform
+
+networks:
+  backend-network:
+    name: backend-network
+    driver: bridge
+
+volumes:
+  cassandra-data-volume:
+    name: cassandra-data-volume
+
+services:
+
+  cassandra-database:
+    image: cassandra:5.0.7-bookworm
+    container_name: cassandra-database
+    restart: unless-stopped
+    networks:
+      - backend-network
+    ports:
+      - "9042:9042"
+      - "7000:7000"
+    volumes:
+      - cassandra-data-volume:/var/lib/cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: cassandra-cluster
+      CASSANDRA_DC: datacenter-1
+      CASSANDRA_RACK: rack-1
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      CASSANDRA_NUM_TOKENS: 16
+      CASSANDRA_LISTEN_ADDRESS: auto
+      CASSANDRA_BROADCAST_ADDRESS: cassandra-database
+      CASSANDRA_RPC_ADDRESS: 0.0.0.0
+      CASSANDRA_BROADCAST_RPC_ADDRESS: cassandra-database
+      MAX_HEAP_SIZE: 1G
+      HEAP_NEWSIZE: 200M
+    healthcheck:
+      test: [ "CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 180s
+
+  cassandra-web-ui:
+    image: ipushc/cassandra-web:v1.1.5
+    container_name: cassandra-web-ui
+    restart: unless-stopped
+    networks:
+      - backend-network
+    ports:
+      - "8890:8083"
+    depends_on:
+      cassandra-database:
+        condition: service_healthy
+    environment:
+      HOST_PORT: ":8083"
+      CASSANDRA_HOST: cassandra-database
+      CASSANDRA_PORT: "9042"

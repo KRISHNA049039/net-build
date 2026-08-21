@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Django
+*.log
+/backend/logs/
+
+# Environment / secrets
+.env
+.env.*
+!.env.template
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Internal AI-session notes -- not project documentation
+CONTEXT_HANDOFF.md
