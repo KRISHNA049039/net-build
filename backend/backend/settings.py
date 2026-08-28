@@ -68,6 +68,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "drf_spectacular_sidecar",   # vendors Swagger UI/Redoc's JS/CSS locally --
+                                   # drf-spectacular pulls them from a CDN by
+                                   # default, which is a hard failure airgapped
     "corsheaders",
     "apps.core",
     "apps.catalog",
@@ -77,6 +80,12 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",   # serves collected static
+                                                       # files (incl. the sidecar
+                                                       # assets above) -- nothing
+                                                       # else in this stack does,
+                                                       # DEBUG=False in production
+                                                       # means Django itself won't
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -114,6 +123,11 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Catalog + FF-net intercept/net-building/net-merging APIs.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Local assets via drf_spectacular_sidecar instead of jsdelivr/unpkg --
+    # see INSTALLED_APPS above and AIRGAP_TESTING.md.
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
 }
 
 # Database
@@ -161,6 +175,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'   # `python manage.py collectstatic` target
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

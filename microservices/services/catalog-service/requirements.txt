@@ -10,6 +10,8 @@ Django==5.2.15
 djangorestframework==3.17.2
 django-cors-headers==4.9.0
 drf-spectacular==0.30.0
+drf-spectacular-sidecar==2025.9.1   # local Swagger UI/Redoc assets, no CDN
+whitenoise==6.8.2                    # serves them (and STATIC_ROOT generally)
 cassandra-driver==3.30.1
 waitress==3.0.2
 python-dotenv==1.2.2

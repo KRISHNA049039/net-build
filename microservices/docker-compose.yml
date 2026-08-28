@@ -67,6 +67,7 @@ services:
       KONG_ADMIN_LISTEN: "127.0.0.1:8001"                    # admin API off the network, not just off the host
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ANONYMOUS_REPORTS: "off"     # no phone-home usage pings
     volumes:
       - ./gateway/kong.yml:/kong/declarative/kong.yml:ro
     ports:

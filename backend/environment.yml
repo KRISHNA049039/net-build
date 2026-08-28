@@ -157,4 +157,6 @@ dependencies:
   - zstd=1.5.7
   - pip:
       - pyarrow==25.0.0
+      - drf-spectacular-sidecar==2025.9.1   # local Swagger UI/Redoc assets, no CDN
+      - whitenoise==6.8.2                    # serves them -- see AIRGAP_TESTING.md
 prefix: D:\anaconda\envs\backend5

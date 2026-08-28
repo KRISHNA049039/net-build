@@ -51,6 +51,8 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_INSTALL_PLUGINS: ""     # airgapped -- nothing fetched from grafana.com
+      GF_ANALYTICS_REPORTING_ENABLED: "false"     # no phone-home usage stats
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"     # no update-check calls out
     depends_on:
       loki:
         condition: service_healthy
