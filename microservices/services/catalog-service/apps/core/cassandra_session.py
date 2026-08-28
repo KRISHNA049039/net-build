@@ -4,6 +4,7 @@ import threading
 import time
 
 from cassandra import ConsistencyLevel
+from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
 from django.conf import settings
@@ -40,12 +41,18 @@ def connect():
         with _lock:
             if _session is not None:
                 return True
+            auth_provider = (
+                PlainTextAuthProvider(username=cfg["USERNAME"], password=cfg["PASSWORD"])
+                if cfg["USERNAME"]
+                else None
+            )
             cluster = Cluster(
                 contact_points=cfg["HOSTS"],
                 port=cfg["PORT"],
                 load_balancing_policy=TokenAwarePolicy(
                     DCAwareRoundRobinPolicy(local_dc=cfg["LOCAL_DC"])
                 ),
+                auth_provider=auth_provider,
                 protocol_version=5,
             )
             session = cluster.connect(cfg["KEYSPACE"]) if cfg["KEYSPACE"] else cluster.connect()

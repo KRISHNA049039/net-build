@@ -42,11 +42,14 @@ again with extra steps.
 
 - **Same physical Cassandra cluster.** Both services talk to the cluster
   built in `../casssndra/` (5 nodes, RF=3 — see `../casssndra/RECOVERY.md`),
-  just different keyspaces. Strict "database per service" would mean two
+  just different keyspaces, and (see `../casssndra/AUTH.md`) different
+  Cassandra *roles* — `catalog_app` can't touch `ans_transformed`, and
+  vice versa, so the keyspace boundary is enforced by the database, not
+  just by convention. Strict "database per service" would mean two
   separate clusters; that's real infrastructure cost for a boundary
-  that's already enforced at the keyspace level, so it wasn't done here.
-  If you need that isolation later, point one service's `CASSANDRA_HOSTS`
-  at a second cluster — nothing else changes.
+  that's already enforced this way, so it wasn't done here. If you need
+  that isolation later, point one service's `CASSANDRA_HOSTS` at a
+  second cluster — nothing else changes.
 - **No message queue / event bus.** Neither service currently needs to
   call or notify the other (confirmed: no cross-imports between
   `apps/catalog` and `apps/ff_net` in the original monolith). If that
@@ -58,13 +61,13 @@ again with extra steps.
 ```bash
 # terminal 1
 cd services/catalog-service
-cp .env.template .env    # edit CASSANDRA_HOSTS etc.
+cp .env.template .env    # edit CASSANDRA_HOSTS, CASSANDRA_PASSWORD (see ../../casssndra/AUTH.md)
 pip install -r requirements.txt
 python serve.py           # :8001
 
 # terminal 2
 cd services/ff-net-service
-cp .env.template .env
+cp .env.template .env    # CASSANDRA_PASSWORD here too -- ff_net_app, not catalog_app's
 pip install -r requirements.txt
 python serve.py           # :8002
 ```
@@ -93,11 +96,16 @@ Then:
 ## Applying schema
 
 Same schema files as the monolith — nothing new was written, since the
-keyspace boundary already matched the service boundary:
+keyspace boundary already matched the service boundary. Needs the
+superuser (or later, a role with `CREATE` on the keyspace) — see
+`../casssndra/AUTH.md`:
 ```
-docker exec -it cassandra-1 cqlsh -f /path/to/casssndra/cassandra/schema.sql       # catalog-service
-docker exec -it cassandra-1 cqlsh -f /path/to/backend/apps/ff_net/submodules/cassandra.sql  # ff-net-service
+docker exec -it cassandra-1 cqlsh -u cassandra -p cassandra -f /path/to/casssndra/cassandra/schema.sql       # catalog-service
+docker exec -it cassandra-1 cqlsh -u cassandra -p cassandra -f /path/to/backend/apps/ff_net/submodules/cassandra.sql  # ff-net-service
 ```
+Then run `../casssndra/scripts/create-app-roles.sh` once (if you haven't
+already for the monolith) to create the `catalog_app`/`ff_net_app` roles
+each service's `.env` points at — never point a service at the superuser.
 
 ## Deploying to the airgapped cluster
 

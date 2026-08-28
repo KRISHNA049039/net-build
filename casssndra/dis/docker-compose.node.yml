@@ -24,11 +24,13 @@ services:
     restart: unless-stopped
     networks:
       - backend-network
+    entrypoint: ["bash", "/auth-entrypoint.sh"]   # enables PasswordAuthenticator -- see ../AUTH.md
     ports:
       - "7000:7000"   # inter-node storage/gossip
       - "9042:9042"   # CQL native transport
     volumes:
       - cassandra-data:/var/lib/cassandra
+      - ../docker/auth-entrypoint.sh:/auth-entrypoint.sh:ro
     environment:
       CASSANDRA_CLUSTER_NAME: cassandra-cluster
       CASSANDRA_DC: "${CASSANDRA_DC:-datacenter-1}"
@@ -47,7 +49,11 @@ services:
       # otherwise.
       JVM_EXTRA_OPTS: "${JVM_EXTRA_OPTS:-}"
     healthcheck:
-      test: [ "CMD-SHELL", "cqlsh 127.0.0.1 9042 -e 'DESCRIBE KEYSPACES' || exit 1" ]
+      # Uses the built-in superuser by default -- if you rotate its
+      # password (you should, see ../AUTH.md), set these two in this
+      # node's .env to match, or point them at a dedicated low-privilege
+      # role instead.
+      test: [ "CMD-SHELL", "cqlsh -u ${CASSANDRA_HEALTHCHECK_USER:-cassandra} -p ${CASSANDRA_HEALTHCHECK_PASSWORD:-cassandra} 127.0.0.1 9042 -e 'DESCRIBE KEYSPACES' || exit 1" ]
       interval: 15s
       timeout: 15s
       retries: 30

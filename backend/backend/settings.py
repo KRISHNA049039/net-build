@@ -53,6 +53,12 @@ CASSANDRA = {
     # LOCAL_QUORUM needs 2 of RF=3 replicas to ack -- survives 1 node (or
     # the whole other rack, since replicas are spread across racks) down.
     "CONSISTENCY_LEVEL": os.environ.get("CASSANDRA_CONSISTENCY_LEVEL", "LOCAL_QUORUM"),
+    # Empty username -> connect unauthenticated (only valid against a
+    # cluster that hasn't had PasswordAuthenticator enabled). See
+    # ../../casssndra/AUTH.md -- never point this at the 'cassandra'
+    # superuser in a real deployment, use a dedicated per-service role.
+    "USERNAME": os.environ.get("CASSANDRA_USERNAME", ""),
+    "PASSWORD": os.environ.get("CASSANDRA_PASSWORD", ""),
 }
 
 

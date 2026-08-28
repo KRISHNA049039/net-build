@@ -32,6 +32,10 @@ CASSANDRA = {
     "KEYSPACE": os.environ.get("CASSANDRA_KEYSPACE", "django_platform"),
     "LOCAL_DC": os.environ.get("CASSANDRA_LOCAL_DC", "datacenter-1"),
     "CONSISTENCY_LEVEL": os.environ.get("CASSANDRA_CONSISTENCY_LEVEL", "LOCAL_QUORUM"),
+    # Use the dedicated catalog_app role (see ../../../../casssndra/AUTH.md
+    # and casssndra/scripts/create-app-roles.sh) -- never the superuser.
+    "USERNAME": os.environ.get("CASSANDRA_USERNAME", ""),
+    "PASSWORD": os.environ.get("CASSANDRA_PASSWORD", ""),
 }
 
 

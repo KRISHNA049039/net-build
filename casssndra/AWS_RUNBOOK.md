@@ -88,14 +88,23 @@ docker exec cassandra-1 nodetool status      # target: 5x UN, 3 in rack1, 2 in r
 --------------------------------------------------------------------
 ## 6. Load schema + data
 --------------------------------------------------------------------
+Auth is enabled from first boot (see `AUTH.md`) -- `-u cassandra -p
+cassandra` is the built-in superuser until you rotate it:
 ```
 docker cp cassandra/schema.sql cassandra-1:/schema.sql
-docker exec -it cassandra-1 cqlsh -f /schema.sql
+docker exec -it cassandra-1 cqlsh -u cassandra -p cassandra -f /schema.sql
 CASSANDRA_HOST=<cassandra-1-private-ip> python cassandra/seed_data.py 200
 ```
 
 --------------------------------------------------------------------
-## 7. What to actually validate before trusting this on the airgapped cluster
+## 7. Auth bootstrap
+--------------------------------------------------------------------
+Fix `system_auth`'s RF, rotate the superuser password, create
+`catalog_app`/`ff_net_app` roles -- same steps as the airgapped cluster
+will need, so validate them here first. Full steps in `AUTH.md`.
+
+--------------------------------------------------------------------
+## 8. What to actually validate before trusting this on the airgapped cluster
 --------------------------------------------------------------------
 1. **Ring forms correctly**: `nodetool status` shows 5x `UN`, `Rack` column
    shows 3x rack1 / 2x rack2, `Owns` roughly balanced.
@@ -118,14 +127,21 @@ CASSANDRA_HOST=<cassandra-1-private-ip> python cassandra/seed_data.py 200
    backup tarball is non-empty.
 6. **App connectivity**: point `backend/.env` `CASSANDRA_HOSTS` at 2-3 of
    the private IPs (not just one — so the driver has a live contact point
-   even if node 1 happens to be down when the app starts) and
-   `CASSANDRA_LOCAL_DC=datacenter-1`, run `python serve.py`, hit `/health/`.
+   even if node 1 happens to be down when the app starts),
+   `CASSANDRA_LOCAL_DC=datacenter-1`, and `CASSANDRA_USERNAME`/`PASSWORD`
+   set to the `catalog_app`/`ff_net_app` role from step 7 (not the
+   superuser) -- run `python serve.py`, hit `/health/`.
+7. **Auth actually enforced**: `cqlsh` with no `-u`/`-p` should fail;
+   `catalog_app`'s credentials should work against `django_platform` but
+   fail against `ans_transformed` (and vice versa for `ff_net_app`) --
+   confirms the per-service role scoping from `AUTH.md` actually holds,
+   not just that *a* login works.
 
-Only once all 6 pass should this same config get replicated onto the
+Only once all 7 pass should this same config get replicated onto the
 airgapped `dis/envs/pcNNN.env` files.
 
 --------------------------------------------------------------------
-## 8. Tear down
+## 9. Tear down
 --------------------------------------------------------------------
 ```
 docker compose --env-file envs/aws-nodeN.env -f docker-compose.node.yml down -v   # per instance

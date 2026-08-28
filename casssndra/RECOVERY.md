@@ -18,6 +18,14 @@ Cluster: 5 nodes, 2 racks (rack1: cassandra-1/2/3, rack2: cassandra-4/5),
 - Any **2 nodes down** (or 1 rack + 1 more node): LOCAL_QUORUM writes to
   the affected ranges fail until a node comes back or is replaced.
 
+**This does NOT automatically apply to authentication.** `system_auth`
+(the internal keyspace holding roles/permissions) defaults to RF=1,
+independent of the RF=3 you set for the app keyspaces -- losing that one
+node locks out login cluster-wide even though your actual data is still
+fully replicated. Fixing this is part of the auth bootstrap, not this
+doc -- see [`AUTH.md`](AUTH.md) section 2, do it before real traffic hits
+the cluster.
+
 ## Hinted handoff (automatic, first line of defense)
 
 Enabled by default, covers outages under `max_hint_window_in_ms`

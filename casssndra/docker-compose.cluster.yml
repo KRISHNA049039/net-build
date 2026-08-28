@@ -30,8 +30,12 @@ x-cassandra-common: &cassandra-common
   restart: unless-stopped
   networks:
     - backend-network
+  entrypoint: ["bash", "/auth-entrypoint.sh"]   # enables PasswordAuthenticator -- see AUTH.md
   healthcheck:
-    test: [ "CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1" ]
+    # Uses the built-in superuser by default -- if you rotate its
+    # password (you should, see AUTH.md), set these two in .env to
+    # match, or point them at a dedicated low-privilege role instead.
+    test: [ "CMD-SHELL", "cqlsh -u ${CASSANDRA_HEALTHCHECK_USER:-cassandra} -p ${CASSANDRA_HEALTHCHECK_PASSWORD:-cassandra} -e 'DESCRIBE KEYSPACES' || exit 1" ]
     interval: 20s
     timeout: 10s
     retries: 20
@@ -46,6 +50,7 @@ services:
       - "9042:9042"          # host entry point
     volumes:
       - cassandra-data-1:/var/lib/cassandra
+      - ./docker/auth-entrypoint.sh:/auth-entrypoint.sh:ro
     environment:
       <<: *cassandra-env
       CASSANDRA_BROADCAST_ADDRESS: cassandra-1
@@ -58,6 +63,7 @@ services:
       - "9043:9042"          # optional second host entry point
     volumes:
       - cassandra-data-2:/var/lib/cassandra
+      - ./docker/auth-entrypoint.sh:/auth-entrypoint.sh:ro
     environment:
       <<: *cassandra-env
       CASSANDRA_BROADCAST_ADDRESS: cassandra-2
@@ -71,6 +77,7 @@ services:
     container_name: cassandra-3
     volumes:
       - cassandra-data-3:/var/lib/cassandra
+      - ./docker/auth-entrypoint.sh:/auth-entrypoint.sh:ro
     environment:
       <<: *cassandra-env
       CASSANDRA_BROADCAST_ADDRESS: cassandra-3
@@ -84,6 +91,7 @@ services:
     container_name: cassandra-4
     volumes:
       - cassandra-data-4:/var/lib/cassandra
+      - ./docker/auth-entrypoint.sh:/auth-entrypoint.sh:ro
     environment:
       <<: *cassandra-env
       CASSANDRA_BROADCAST_ADDRESS: cassandra-4
@@ -97,6 +105,7 @@ services:
     container_name: cassandra-5
     volumes:
       - cassandra-data-5:/var/lib/cassandra
+      - ./docker/auth-entrypoint.sh:/auth-entrypoint.sh:ro
     environment:
       <<: *cassandra-env
       CASSANDRA_BROADCAST_ADDRESS: cassandra-5
@@ -120,3 +129,7 @@ services:
       HOST_PORT: ":8083"
       CASSANDRA_HOST: cassandra-1
       CASSANDRA_PORT: "9042"
+      # Defaults to the built-in superuser -- update after rotating its
+      # password (see AUTH.md), or point at a dedicated read-only role.
+      CASSANDRA_USERNAME: "${CASSANDRA_WEBUI_USER:-cassandra}"
+      CASSANDRA_PASSWORD: "${CASSANDRA_WEBUI_PASSWORD:-cassandra}"

@@ -26,7 +26,9 @@ casssndra/            Cassandra cluster setup (Docker Compose)
   docker-compose.cluster.yml    single-node dev cluster
   dis/                           multi-node (5-node, 2-rack) LAN cluster + RUNBOOK.md
   cassandra/                     schema.sql / seed.sql / seed_data.py
+  scripts/                       repair.sh / backup.sh / create-app-roles.sh
   RECOVERY.md                    replication/repair/backup/restore
+  AUTH.md                        PasswordAuthenticator bootstrap, per-service roles
   AWS_RUNBOOK.md                 validate the cluster on AWS before the airgapped one
 
 microservices/       Same catalog/ff_net domains, split into two independently
@@ -50,12 +52,15 @@ docker compose -f docker-compose.cluster.yml up -d
 **2. Apply schema** — see each app's own docs for its specific tables;
 `ff_net`'s is at
 [backend/apps/ff_net/submodules/cassandra.sql](backend/apps/ff_net/submodules/cassandra.sql).
+Auth is on by default (`cqlsh -u cassandra -p cassandra -f ...` — the
+built-in superuser; see [casssndra/AUTH.md](casssndra/AUTH.md) before
+this goes anywhere near real traffic).
 
 **3. Configure and run the backend:**
 
 ```bash
 cd backend
-cp .env.template .env    # then edit CASSANDRA_HOSTS etc. for your setup
+cp .env.template .env    # then edit CASSANDRA_HOSTS, CASSANDRA_USERNAME/PASSWORD etc.
 pip install -r requirements.lock.txt
 
 python manage.py runserver     # dev, autoreloads

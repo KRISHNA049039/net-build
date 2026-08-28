@@ -93,11 +93,14 @@ Then repeat section 1 (seeds first: pc100, then pc103, then the rest).
 --------------------------------------------------------------------
 ## 5. Create keyspaces + load data (once ring is 5x UN)
 --------------------------------------------------------------------
+Auth is enabled from first boot (see `../AUTH.md`) — every `cqlsh` call
+needs credentials, `-u cassandra -p cassandra` (the built-in superuser)
+until you rotate it in section 6 below.
 ```
 docker cp ../cassandra/schema.sql cassandra-1:/schema.sql
 docker cp ../../backend/apps/ff_net/submodules/cassandra.sql cassandra-1:/ff_net.sql
-docker exec -it cassandra-1 cqlsh -f /schema.sql
-docker exec -it cassandra-1 cqlsh -f /ff_net.sql
+docker exec -it cassandra-1 cqlsh -u cassandra -p cassandra -f /schema.sql
+docker exec -it cassandra-1 cqlsh -u cassandra -p cassandra -f /ff_net.sql
 ```
 Both keyspaces are `NetworkTopologyStrategy` / `datacenter-1: 3` — see
 `schema.sql` and `apps/ff_net/submodules/cassandra.sql` for the source of
@@ -111,6 +114,15 @@ Any node works as the initial contact point — the driver discovers the
 rest via `system.peers`.
 
 --------------------------------------------------------------------
-## 6. Repair / backup / restore
+## 6. Authentication bootstrap (once, right after section 5)
+--------------------------------------------------------------------
+Fix `system_auth`'s replication factor, rotate the superuser password,
+and create per-service roles (`catalog_app`, `ff_net_app`) — full steps
+in `../AUTH.md`. Do this before pointing real application traffic at the
+cluster; skipping the `system_auth` RF fix means losing one node can
+lock out authentication cluster-wide, RF=3 everywhere else notwithstanding.
+
+--------------------------------------------------------------------
+## 7. Repair / backup / restore
 --------------------------------------------------------------------
 See `../RECOVERY.md`.

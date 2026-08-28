@@ -17,11 +17,13 @@ services:
     restart: unless-stopped
     networks:
       - backend-network
+    entrypoint: ["bash", "/auth-entrypoint.sh"]   # enables PasswordAuthenticator -- see AUTH.md
     ports:
       - "9042:9042"
       - "7000:7000"
     volumes:
       - cassandra-data-volume:/var/lib/cassandra
+      - ./docker/auth-entrypoint.sh:/auth-entrypoint.sh:ro
     environment:
       CASSANDRA_CLUSTER_NAME: cassandra-cluster
       CASSANDRA_DC: datacenter-1
@@ -35,7 +37,7 @@ services:
       MAX_HEAP_SIZE: 1G
       HEAP_NEWSIZE: 200M
     healthcheck:
-      test: [ "CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1" ]
+      test: [ "CMD-SHELL", "cqlsh -u ${CASSANDRA_HEALTHCHECK_USER:-cassandra} -p ${CASSANDRA_HEALTHCHECK_PASSWORD:-cassandra} -e 'DESCRIBE KEYSPACES' || exit 1" ]
       interval: 20s
       timeout: 10s
       retries: 15
@@ -56,3 +58,5 @@ services:
       HOST_PORT: ":8083"
       CASSANDRA_HOST: cassandra-database
       CASSANDRA_PORT: "9042"
+      CASSANDRA_USERNAME: "${CASSANDRA_WEBUI_USER:-cassandra}"
+      CASSANDRA_PASSWORD: "${CASSANDRA_WEBUI_PASSWORD:-cassandra}"
