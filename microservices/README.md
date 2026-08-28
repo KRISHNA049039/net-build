@@ -33,8 +33,10 @@ again with extra steps.
 - **Separate failure domains.** `ff-net-service` crashing doesn't take
   `catalog-service` down with it (in the monolith, one process, one
   crash takes everything).
-- **A gateway sits in front** (`gateway/nginx.conf`) so callers hit one
-  origin (`/catalog/...`, `/ff_net/...`) instead of knowing two ports.
+- **A Kong API gateway sits in front** (`gateway/kong.yml`, DB-less mode)
+  so callers hit one origin (`/catalog/...`, `/ff_net/...`) instead of
+  knowing two ports -- and gets you per-service auth/rate-limiting
+  plugins for free if you need them later (see `ARCHITECTURE.md`).
 
 ## What's intentionally NOT split
 
@@ -105,3 +107,9 @@ validation process apply unchanged — this only changes how the Django
 image, get it onto the airgapped network the same way you'd get any
 other artifact there, and run `docker compose up -d` per service (or per
 host) pointing `CASSANDRA_HOSTS` at the airgapped ring.
+
+## Logs
+
+Both services' logs (and the monolith's, if you're running that instead
+or alongside) ship to a central, searchable place — see
+[`../logging/CENTRALIZED_LOGGING.md`](../logging/CENTRALIZED_LOGGING.md).

@@ -1,0 +1,56 @@
+name: net_build_logging
+
+# Central log aggregation: run this ONCE, on whichever host you designate
+# as the log host (can be a Cassandra host, a microservices host, or its
+# own dedicated machine -- anywhere reachable over the LAN from every
+# other host). Every Promtail instance (microservices/, backend/'s
+# monolith host) pushes into this. See CENTRALIZED_LOGGING.md.
+networks:
+  backend-network:
+    name: backend-network
+    external: true
+
+volumes:
+  loki-data: { name: loki-data }
+  grafana-data: { name: grafana-data }
+
+services:
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: loki
+    restart: unless-stopped
+    networks:
+      - backend-network
+    ports:
+      - "3100:3100"     # push + query API -- Promtail instances on other
+                          # hosts need this reachable over the LAN, not just
+                          # inside backend-network
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q -O- http://127.0.0.1:3100/ready || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - backend-network
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_INSTALL_PLUGINS: ""     # airgapped -- nothing fetched from grafana.com
+    depends_on:
+      loki:
+        condition: service_healthy

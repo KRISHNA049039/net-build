@@ -181,8 +181,20 @@ LOGGING = {
             "encoding": "utf-8",
             "formatter": "line",
         },
+        # Everything that isn't the per-request line (startup, warnings,
+        # Cassandra connect/reconnect, tracebacks) -- console-only until
+        # now, so nothing not run under Docker had a file for Promtail to
+        # tail. See ../../logging/CENTRALIZED_LOGGING.md.
+        "app_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(BASE_DIR / "logs" / "app.log"),
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 5,
+            "encoding": "utf-8",
+            "formatter": "line",
+        },
     },
-    "root": {"handlers": ["console"], "level": "INFO"},
+    "root": {"handlers": ["console", "app_file"], "level": "INFO"},
     "loggers": {
         "cassandra": {"handlers": ["console"], "level": "WARNING", "propagate": False},
         "requests": {"handlers": ["request_file", "console"], "level": "INFO", "propagate": False},

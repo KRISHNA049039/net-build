@@ -122,8 +122,19 @@ LOGGING = {
             "encoding": "utf-8",
             "formatter": "line",
         },
+        # See ../../../logging/CENTRALIZED_LOGGING.md -- Promtail tails
+        # this volume-mounted logs/ dir, so everything the root logger
+        # emits needs to land in a file, not just stdout.
+        "app_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(BASE_DIR / "logs" / "app.log"),
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 5,
+            "encoding": "utf-8",
+            "formatter": "line",
+        },
     },
-    "root": {"handlers": ["console"], "level": "INFO"},
+    "root": {"handlers": ["console", "app_file"], "level": "INFO"},
     "loggers": {
         "cassandra": {"handlers": ["console"], "level": "WARNING", "propagate": False},
         "requests": {"handlers": ["request_file", "console"], "level": "INFO", "propagate": False},

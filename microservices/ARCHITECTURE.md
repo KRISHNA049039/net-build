@@ -11,7 +11,7 @@ exactly how the WSGI process starts up.
                                  |
                                  v
                      +-----------------------+
-                     |   gateway (nginx)      |   :8080, public entry point
+                     |   gateway (Kong)       |   :8080, public entry point
                      |   /catalog/*  -------- +---+
                      |   /ff_net/*   -------- +-+ |
                      +-----------------------+ | |
@@ -72,9 +72,17 @@ code is byte-for-byte what ran in the monolith. Only the four files that
 define *how the process boots* (`settings.py`, `urls.py`, `wsgi.py`,
 `serve.py`) are new, because each service now needs to boot on its own.
 
-The **gateway** (`gateway/nginx.conf`) and **`docker-compose.yml`** are
+The **gateway** (`gateway/kong.yml`) and **`docker-compose.yml`** are
 the only genuinely new infrastructure — the monolith had neither, since
 one process on one port didn't need routing.
+
+The gateway is [Kong](https://github.com/Kong/kong) running DB-less
+(`KONG_DATABASE=off`): `gateway/kong.yml` is a declarative file that *is*
+the entire gateway config, so there's no extra Postgres instance to run
+or back up just to route two services — a real consideration for the
+airgapped target. It started as a plain nginx reverse proxy; Kong
+replaced it once routing needed to grow into something with a plugin
+path to auth/rate-limiting (§4) without hand-writing that in nginx/Lua.
 
 ---
 
@@ -148,7 +156,8 @@ team, that schema is the thing to version and diff, not the Python code.
 
 The **gateway convention** is: `/<service-name>/<service's own native
 path>`. The gateway does not rewrite paths inside a service, it only
-prefixes-and-forwards (see `gateway/nginx.conf`) — so
+strips the service-name prefix and forwards (see `gateway/kong.yml`'s
+`strip_path: true` per route) — so
 `/catalog/api/catalog/orders/` on the gateway is exactly
 `/api/catalog/orders/` on catalog-service, verbatim. This matters for
 consistency: a new service's Swagger UI, health check, and API all show
@@ -161,9 +170,10 @@ anything about the gateway.
 
 - No message broker (Kafka/RabbitMQ/Redis Streams) is deployed.
 - No service mesh, no gRPC, no shared event schema registry.
-- No API gateway auth/rate-limiting (nginx here is a plain reverse
-  proxy — see "Not done here" in §6 before adding a 3rd service if you
-  need auth).
+- No auth/rate-limiting plugins are enabled on the gateway yet, even
+  though Kong (the gateway) supports both declaratively — see
+  `gateway/kong.yml`'s commented-out example and "Not done here" in §6
+  before adding a 3rd service if you need this.
 
 These are absent because nothing in the current 2-service system needs
 them (§2 — zero cross-calls today). Don't add them speculatively; add
@@ -279,20 +289,23 @@ don't invent a new one per service.
 8. Wire into root `docker-compose.yml`: new service block (mirror
    `catalog-service`'s), attached to `backend-network`, own
    `env_file`, own healthcheck hitting its `/health/`.
-9. Add its route to `gateway/nginx.conf`: an `upstream` block + a
-   `location /<name>/ { proxy_pass ...; }`, following the "prefix,
-   don't rewrite" convention from §3.
+9. Add its route to `gateway/kong.yml`: a new `services:` entry (`url:
+   http://<name>-service:<port>`) with a `routes:` entry (`paths: [
+   /<name> ]`, `strip_path: true`), following the "prefix, don't
+   rewrite" convention from §3. `docker exec gateway kong reload` (or
+   `docker compose restart gateway`) picks it up.
 10. If it needs to call an existing service, use §5a/§5b — never a
     Python import across the `services/` boundary.
 
 **Not done here, worth doing before this goes past a handful of
 services or past "trusted internal network":** auth between services
-(mTLS or a shared internal token), centralized log aggregation (each
-service currently logs to its own `logs/requests.log` + stdout,
-independently), and distributed tracing (a call chain across 3+
-services with only per-service logs gets hard to follow fast — this is
-usually the actual trigger for adding OpenTelemetry, not a fixed service
-count).
+(mTLS or a shared internal token) and distributed tracing (a call chain
+across 3+ services with only per-service logs gets hard to follow fast —
+this is usually the actual trigger for adding OpenTelemetry, not a fixed
+service count). Centralized log aggregation *is* done — see
+[`../logging/CENTRALIZED_LOGGING.md`](../logging/CENTRALIZED_LOGGING.md);
+add a new service's logs into it per that doc's §4 as part of the "adding
+a service" checklist above, not as an afterthought.
 
 ---
 

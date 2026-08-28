@@ -24,8 +24,16 @@ backend/            Django project (the actual API)
 
 casssndra/            Cassandra cluster setup (Docker Compose)
   docker-compose.cluster.yml    single-node dev cluster
-  dis/                           multi-node (2-PC, 5-node) LAN cluster + RUNBOOK.md
+  dis/                           multi-node (5-node, 2-rack) LAN cluster + RUNBOOK.md
   cassandra/                     schema.sql / seed.sql / seed_data.py
+  RECOVERY.md                    replication/repair/backup/restore
+  AWS_RUNBOOK.md                 validate the cluster on AWS before the airgapped one
+
+microservices/       Same catalog/ff_net domains, split into two independently
+                       deployable services + a Kong gateway (see ARCHITECTURE.md)
+
+logging/              Centralized logging (Loki+Promtail+Grafana) for both
+                        backend/ and microservices/ -- see CENTRALIZED_LOGGING.md
 ```
 
 ## Running it
@@ -81,3 +89,12 @@ cd backend
 python -m pytest apps/ff_net/tests/     # needs Cassandra reachable -- integration tests, not mocked
 bash scripts/test_merge_smoke.sh          # curl-only smoke test, no Python deps
 ```
+
+## Other architectures / cross-cutting docs
+
+- [microservices/](microservices/) — the same two domains as
+  independently deployable services + gateway. `backend/` above is
+  unaffected either way; run whichever fits what you're testing.
+- [logging/CENTRALIZED_LOGGING.md](logging/CENTRALIZED_LOGGING.md) —
+  searchable logs across either architecture, plus a recap of Cassandra
+  replication/restoration (full detail in `casssndra/RECOVERY.md`).

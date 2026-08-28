@@ -1,0 +1,27 @@
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: ${LOKI_URL}/loki/api/v1/push
+
+scrape_configs:
+  - job_name: catalog-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: catalog-service
+          service: catalog-service
+          env: microservices
+          __path__: /var/log/catalog-service/*.log
+
+  - job_name: ff-net-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: ff-net-service
+          service: ff-net-service
+          env: microservices
+          __path__: /var/log/ff-net-service/*.log

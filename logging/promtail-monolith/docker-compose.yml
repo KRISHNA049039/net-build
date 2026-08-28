@@ -1,0 +1,22 @@
+name: net_build_logging_monolith
+
+# Run this ON THE SAME HOST as `backend/serve.py` (needs Docker Desktop
+# there -- if that host doesn't have Docker, run Promtail as a native
+# binary instead, see ../CENTRALIZED_LOGGING.md "Without Docker").
+# Bind-mounts the monolith's log directory directly (not a named volume --
+# it isn't Docker-managed, it's just files on this host) and ships it to
+# the central Loki (../).
+services:
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: promtail-monolith
+    restart: unless-stopped
+    volumes:
+      - ../../backend/logs:/var/log/backend-monolith:ro
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+    environment:
+      # Central Loki (../). This is virtually always a DIFFERENT host
+      # than wherever the monolith itself runs -- point this at that
+      # host's LAN IP, e.g. LOKI_URL=http://192.168.4.100:3100
+      LOKI_URL: "${LOKI_URL:?set LOKI_URL to the central Loki host, e.g. http://192.168.4.100:3100}"
+    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
