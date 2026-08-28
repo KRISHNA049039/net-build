@@ -17,6 +17,11 @@ services:
         paths:
           - /catalog
         strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
 
   - name: ff-net-service
     url: http://ff-net-service:8002
@@ -25,16 +30,20 @@ services:
         paths:
           - /ff_net
         strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 300
+          policy: local
 
-# No plugins enabled by default -- matches the current CORS_ALLOW_ALL_ORIGINS
-# permissive stance for this trusted internal network. To add auth or
-# rate-limiting per service, add a `plugins:` list under that service, e.g.:
+# Rate-limiting only, per service (300 req/min, policy "local" -- counted
+# in-process, no Redis needed, fine for the single-Kong-instance topology
+# here; see Kong's docs before adding a second gateway instance, "local"
+# doesn't share counts across replicas). Non-breaking -- no key required,
+# just a cap, so it's safe with every current caller.
 #
-#   plugins:
-#     - name: rate-limiting
-#       config:
-#         minute: 300
-#         policy: local
-#     - name: key-auth
-#
-# See ../ARCHITECTURE.md section 6 for when this is actually worth doing.
+# No auth (key-auth etc.) -- matches the current CORS_ALLOW_ALL_ORIGINS
+# permissive stance for this trusted internal network, and adding it would
+# break every existing caller (they'd all need a key). Add it once there's
+# a real external/untrusted caller to protect against, not preemptively --
+# see ../ARCHITECTURE.md section 6.

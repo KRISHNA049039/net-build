@@ -83,8 +83,8 @@ back up, or restore.
   service directly. Kong only routes; it never rewrites a service's own
   URL structure.
 - **Plugins** — request/response middleware (auth, rate-limiting,
-  metrics...) attached to a Service or Route. None are enabled currently
-  (see §6).
+  metrics...) attached to a Service or Route. `rate-limiting` is enabled
+  on both routes (see §6); no auth plugin (see §7).
 
 **How it interacts with the rest of the stack:** purely as the front
 door for HTTP traffic into `catalog-service`/`ff-net-service` — it does
@@ -260,9 +260,9 @@ container names resolve). This is also why Grafana itself needs to be on
 - **Explore** (compass icon) — ad-hoc queries against either datasource,
   the fastest path to "show me recent logs/metrics for X," no dashboard
   needed.
-- **Dashboards** — none are pre-built/provisioned here yet (see §6); you'd
-  build panels mixing Loki and Prometheus queries side by side (e.g. error
-  rate from Prometheus next to the matching log lines from Loki).
+- **Dashboards** — the "Microservices Overview" dashboard (§7) is
+  pre-built and provisioned; open it directly instead of starting from
+  Explore for routine checks.
 - **Auth:** `admin`/`${GRAFANA_ADMIN_PASSWORD:-admin}` (from
   `logging/.env`), anonymous access disabled
   (`GF_AUTH_ANONYMOUS_ENABLED=false`), and `GF_INSTALL_PLUGINS=""` /
@@ -309,27 +309,76 @@ same request. They're two independent views of the same event.
 
 ---
 
-## 6. What's not done here
+## 6. Rate-limiting and the pre-built dashboard
+
+Two of the original gaps below are now closed.
+
+**Kong rate-limiting** (`microservices/gateway/kong.yml`): each service's
+route carries a `rate-limiting` plugin, `minute: 300`, `policy: local`.
+`policy: local` means each Kong instance counts requests **in its own
+memory** — no Redis, no shared state, which is why it's safe with zero
+extra infrastructure here. The trade-off, if this ever runs as more than
+one Kong replica: each replica enforces its own 300/min independently, so
+the *effective* cluster-wide limit becomes `300 × replica count`, not 300.
+Fine at one gateway instance; revisit (`policy: redis`) before scaling
+Kong horizontally. This was chosen over `key-auth` specifically because
+it's non-breaking — no key required, so every existing caller (including
+your own curl testing) keeps working exactly as before, just capped.
+Verify it landed via the response headers on any request:
+```bash
+curl -si http://localhost:8080/catalog/health/ | grep -i ratelimit
+# X-RateLimit-Limit-Minute: 300
+# X-RateLimit-Remaining-Minute: 299
+```
+
+**Grafana dashboard** (`logging/grafana-dashboards/microservices-overview.json`,
+provisioned the same declarative way as the datasources — via
+`logging/grafana-dashboards-provider.yml`, a `type: file` provider Grafana
+polls every 30s for changes, so editing the JSON and saving is enough,
+no reload/restart needed). One dashboard, "Microservices Overview,"
+covering both services identically: request rate by status code, p95
+latency (`histogram_quantile` over the `http_request_duration_seconds`
+histogram), a `cassandra_up` stat panel, and a live Loki logs panel —
+Prometheus and Loki panels side by side on one screen, which is the
+"correlate logs and metrics without leaving the page" workflow Explore
+alone doesn't give you. Referenced by fixed datasource `uid`s (`loki`,
+`prometheus`, set explicitly in `grafana-datasources.yml` rather than
+left to Grafana's auto-generated ones) so the dashboard JSON's datasource
+references stay stable across redeploys.
+
+**Troubleshooting note:** if `admin`/`${GRAFANA_ADMIN_PASSWORD}` ever
+stops working after recreating the `grafana` container, it's because that
+env var only seeds the admin password on a *fresh* `grafana-data` volume
+— it's not re-applied on every restart. Recover with:
+```bash
+docker exec grafana grafana-cli admin reset-admin-password admin
+```
+
+---
+
+## 7. What's still not done
 
 - **No Kong metrics into Prometheus.** Kong has a `prometheus` plugin
   that would expose Kong's own request/latency/status metrics at
   `/metrics` for scraping — not enabled, so you currently have no
   visibility into gateway-level behavior (only what each service's own
   `/metrics/` reports), only access/error logs on `stdout`.
-- **No dashboards provisioned**, only datasources — Explore covers ad-hoc
-  digging, but there's no saved "at a glance" view.
 - **No alerting.** Grafana can alert on either datasource (e.g. "error
   rate > 5% for 5m", "more than N ERROR log lines in 5m"), but no rules
-  exist yet.
+  exist, and there's no notification channel (email/webhook) configured
+  to send them to yet — that's a prerequisite decision, not just config.
 - **No log-to-metric correlation** (LogQL `unwrap` / Prometheus recording
   rules) — logs and metrics are both queryable but not cross-linked (e.g.
   jumping from a Prometheus spike straight to the matching log lines).
-- **No distributed tracing** — with only two services this hasn't been
-  needed; per `microservices/ARCHITECTURE.md` §6, this is usually what
-  actually triggers adding OpenTelemetry, not a fixed service count.
-- **Kong has no auth/rate-limiting plugins enabled** — see
-  `microservices/gateway/kong.yml`'s commented example and
-  `ARCHITECTURE.md` §4/§6 for when that's worth adding.
+- **No distributed tracing** — with only two services that don't call
+  each other yet, this is a deliberate non-goal, not an oversight; per
+  `microservices/ARCHITECTURE.md` §6, the usual trigger is an actual
+  multi-service call chain getting hard to follow from logs alone, not a
+  fixed service count. Revisit if/when that happens.
+- **Kong has no auth plugin enabled** — rate-limiting (§6) is on, but
+  `key-auth`/similar is deliberately not, since every current caller
+  would need a key issued first. See `ARCHITECTURE.md` §4/§6 for when
+  that trade-off is worth making.
 
 ---
 

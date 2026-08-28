@@ -71,6 +71,8 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana-dashboards-provider.yml:/etc/grafana/provisioning/dashboards/provider.yml:ro
+      - ./grafana-dashboards:/var/lib/grafana/dashboards:ro
     environment:
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
