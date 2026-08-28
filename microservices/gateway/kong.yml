@@ -1,0 +1,40 @@
+# Kong declarative config (DB-less mode -- no Postgres to run/backup
+# airgapped, this file IS the gateway's entire config). Reload after
+# editing: docker exec gateway kong reload, or `docker compose restart gateway`.
+#
+# Routing convention (same as the nginx version it replaces): each route's
+# path prefix is stripped before forwarding, so /catalog/<x> reaches
+# catalog-service as /<x> -- the gateway only routes, it never rewrites a
+# service's own internal URL structure. See ../ARCHITECTURE.md section 3.
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: catalog-service
+    url: http://catalog-service:8001
+    routes:
+      - name: catalog-route
+        paths:
+          - /catalog
+        strip_path: true
+
+  - name: ff-net-service
+    url: http://ff-net-service:8002
+    routes:
+      - name: ff-net-route
+        paths:
+          - /ff_net
+        strip_path: true
+
+# No plugins enabled by default -- matches the current CORS_ALLOW_ALL_ORIGINS
+# permissive stance for this trusted internal network. To add auth or
+# rate-limiting per service, add a `plugins:` list under that service, e.g.:
+#
+#   plugins:
+#     - name: rate-limiting
+#       config:
+#         minute: 300
+#         policy: local
+#     - name: key-auth
+#
+# See ../ARCHITECTURE.md section 6 for when this is actually worth doing.
