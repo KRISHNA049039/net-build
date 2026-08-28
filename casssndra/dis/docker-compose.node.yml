@@ -58,3 +58,28 @@ services:
       timeout: 15s
       retries: 30
       start_period: 300s
+
+  # Optional web UI for this node -- off by default since this same file
+  # runs on all 5 PCs and one UI is enough. Bring it up on just the PC
+  # you want to browse from with:
+  #   docker compose --env-file envs/<node>.env -f docker-compose.node.yml --profile ui up -d
+  cassandra-web-ui:
+    image: ipushc/cassandra-web:v1.1.5
+    container_name: "${NODE_NAME}-web-ui"
+    restart: unless-stopped
+    profiles: ["ui"]
+    networks:
+      - backend-network
+    ports:
+      - "8890:8083"
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    environment:
+      HOST_PORT: ":8083"
+      CASSANDRA_HOST: "${NODE_NAME}"
+      CASSANDRA_PORT: "9042"
+      # Defaults to the built-in superuser -- update after rotating its
+      # password (see ../AUTH.md), or point at a dedicated read-only role.
+      CASSANDRA_USERNAME: "${CASSANDRA_WEBUI_USER:-cassandra}"
+      CASSANDRA_PASSWORD: "${CASSANDRA_WEBUI_PASSWORD:-cassandra}"

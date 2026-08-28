@@ -2,7 +2,23 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
+  # Monolith (backend/serve.py or manage.py runserver) -- runs directly on
+  # the host, not in a container, so it's reached via host.docker.internal
+  # rather than a container name. Only present if you're running that
+  # architecture instead of microservices/ below.
   - job_name: django-backend
     metrics_path: /metrics/
     static_configs:
       - targets: ["host.docker.internal:8000"]
+
+  # microservices/ -- both containers, on backend-network, reached by
+  # container name like Loki/Grafana are.
+  - job_name: catalog-service
+    metrics_path: /metrics/
+    static_configs:
+      - targets: ["catalog-service:8001"]
+
+  - job_name: ff-net-service
+    metrics_path: /metrics/
+    static_configs:
+      - targets: ["ff-net-service:8002"]

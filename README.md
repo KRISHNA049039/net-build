@@ -23,7 +23,9 @@ backend/            Django project (the actual API)
   .env.template         copy to .env and fill in for your environment
 
 casssndra/            Cassandra cluster setup (Docker Compose)
-  docker-compose.cluster.yml    single-node dev cluster
+  docker-compose.djnago.yaml     single-node dev Cassandra + web UI
+  docker-compose.cluster.yml     5-node, 2-rack local dev cluster (simulates the
+                                    full ring as separate containers on one machine)
   dis/                           multi-node (5-node, 2-rack) LAN cluster + RUNBOOK.md
   cassandra/                     schema.sql / seed.sql / seed_data.py
   scripts/                       repair.sh / checkpoint.sh / consolidate-checkpoint.sh /
@@ -42,14 +44,16 @@ logging/              Centralized logging (Loki+Promtail+Grafana) for both
 
 ## Running it
 
-**1. Start Cassandra** (single-node dev cluster):
+**1. Start Cassandra** (single node + web UI, for local dev):
 
 ```bash
 cd casssndra
-docker compose -f docker-compose.cluster.yml up -d
+docker compose -f docker-compose.djnago.yaml up -d
 ```
 
-(For the multi-node LAN setup instead, see `casssndra/dis/RUNBOOK.md`.)
+(For a local 5-node ring on one machine instead, use
+`docker-compose.cluster.yml`; for the real multi-node LAN setup, see
+`casssndra/dis/RUNBOOK.md`.)
 
 **2. Apply schema** — see each app's own docs for its specific tables;
 `ff_net`'s is at
@@ -105,6 +109,9 @@ bash scripts/test_merge_smoke.sh          # curl-only smoke test, no Python deps
 - [logging/CENTRALIZED_LOGGING.md](logging/CENTRALIZED_LOGGING.md) —
   searchable logs across either architecture, plus a recap of Cassandra
   replication/restoration (full detail in `casssndra/RECOVERY.md`).
+- [OBSERVABILITY_STACK.md](OBSERVABILITY_STACK.md) — how Kong, Loki,
+  Prometheus, and Grafana actually work and interact (push vs. pull,
+  what each one stores, end-to-end request trace, verification commands).
 - [AIRGAP_TESTING.md](AIRGAP_TESTING.md) — how to prove this whole stack
   needs zero internet, on a single connected machine, before it goes
   anywhere near the airgapped PCs; plus the pre-transfer checklist

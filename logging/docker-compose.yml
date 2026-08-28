@@ -13,8 +13,32 @@ networks:
 volumes:
   loki-data: { name: loki-data }
   grafana-data: { name: grafana-data }
+  prometheus-data: { name: prometheus-data }
 
 services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: prometheus
+    restart: unless-stopped
+    networks:
+      - backend-network
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../casssndra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # so the django-backend (monolith) target resolves on Linux too
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -q -O- http://127.0.0.1:9090/-/healthy || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   loki:
     image: grafana/loki:3.1.1
     container_name: loki
