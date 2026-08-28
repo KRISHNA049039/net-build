@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 
+from cassandra import ConsistencyLevel
 from cassandra.cluster import Cluster
 from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
 from django.conf import settings
@@ -48,6 +49,9 @@ def connect():
                 protocol_version=5,
             )
             session = cluster.connect(cfg["KEYSPACE"]) if cfg["KEYSPACE"] else cluster.connect()
+            session.default_consistency_level = getattr(
+                ConsistencyLevel, cfg["CONSISTENCY_LEVEL"]
+            )
             _cluster = cluster
             _session = session
             _ready = True

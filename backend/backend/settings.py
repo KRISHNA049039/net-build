@@ -25,6 +25,15 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
 
+# django-cors-headers ships with no origins allowed by default -- both of these
+# must be set explicitly or every cross-origin request gets blocked.
+CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "False") == "True"
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -41,6 +50,9 @@ CASSANDRA = {
     "PORT": int(os.environ.get("CASSANDRA_PORT", "9042")),
     "KEYSPACE": os.environ.get("CASSANDRA_KEYSPACE") or None,
     "LOCAL_DC": os.environ.get("CASSANDRA_LOCAL_DC", "datacenter-1"),
+    # LOCAL_QUORUM needs 2 of RF=3 replicas to ack -- survives 1 node (or
+    # the whole other rack, since replicas are spread across racks) down.
+    "CONSISTENCY_LEVEL": os.environ.get("CASSANDRA_CONSISTENCY_LEVEL", "LOCAL_QUORUM"),
 }
 
 

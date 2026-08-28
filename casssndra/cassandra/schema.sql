@@ -3,7 +3,7 @@ DROP KEYSPACE IF EXISTS django_platform;
 CREATE KEYSPACE IF NOT EXISTS django_platform
 WITH replication = {
   'class': 'NetworkTopologyStrategy',
-  'datacenter-1': 1
+  'datacenter-1': 3
 };
 
 

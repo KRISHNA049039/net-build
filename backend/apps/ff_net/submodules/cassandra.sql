@@ -1,5 +1,5 @@
-CREATE KEYSPACE IF NOT EXISTS ans_transformed 
-WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};
+CREATE KEYSPACE IF NOT EXISTS ans_transformed
+WITH replication = {'class': 'NetworkTopologyStrategy', 'datacenter-1': 3};
 
 USE ans_transformed;
 

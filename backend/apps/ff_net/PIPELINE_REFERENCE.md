@@ -403,13 +403,13 @@ object in the `nets` array.
 
 ## 5. Schema (`cassandra.sql`)
 
-Keyspace: `ans_transformed`, `SimpleStrategy`, RF=3 (single-node dev
-cluster — RF=3 without 3 nodes just means writes need care about
-consistency level, but doesn't break anything on 1 node at RF being higher
-than node count for basic read/write at `ONE`/`LOCAL_QUORUM`... on a truly
-single-node cluster with RF=3 configured, be aware `LOCAL_QUORUM`
-writes/reads could behave unexpectedly if you ever scale down replicas;
-not a concern introduced by this migration, inherited as-is).
+Keyspace: `ans_transformed`, `NetworkTopologyStrategy` (`datacenter-1: 3`),
+RF=3. Moved off `SimpleStrategy` when the cluster went multi-rack (see
+`casssndra/dis/`) — `SimpleStrategy` ignores rack placement, so on a
+2-rack cluster it could stack multiple replicas in the same rack and
+defeat the point of rack awareness. On a single-node dev cluster RF=3 is
+still harmless for basic `ONE`/`LOCAL_QUORUM` reads/writes; just be aware
+`LOCAL_QUORUM` needs real replicas once you scale beyond one node.
 
 ```
 ff_net_report            -- raw source, NOT written by this pipeline

@@ -5,16 +5,18 @@ Seed django_platform tables with N rows each.
 Install:  pip install cassandra-driver
 Run:      python seed_data.py 20          # 20 rows per table (default)
           python seed_data.py 100 --dry   # print CQL instead of inserting
+          CASSANDRA_HOST=192.168.4.100 python seed_data.py 20
 """
 
+import os
 import sys
 import random
 import uuid
 from datetime import datetime, date, time, timedelta
 
 # ---------------------------------------------------------------- config
-HOST = "127.0.0.1"
-PORT = 9042
+HOST = os.environ.get("CASSANDRA_HOST", "127.0.0.1")
+PORT = int(os.environ.get("CASSANDRA_PORT", "9042"))
 KEYSPACE = "django_platform"
 
 ROW_COUNT = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 20
