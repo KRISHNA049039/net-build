@@ -122,9 +122,14 @@ will need, so validate them here first. Full steps in `AUTH.md`.
    simulate a dead disk, then follow the replace procedure in
    `../RECOVERY.md` and confirm it streams back to `UN` without a manual
    restore.
-5. **Repair + backup**: run `scripts/repair.sh` and `scripts/backup.sh`
-   against a live node, confirm both complete without error and the
-   backup tarball is non-empty.
+5. **Repair + checkpoint**: run `scripts/repair.sh` and
+   `scripts/checkpoint.sh` against a live node, confirm both complete
+   without error and the tarball is non-empty. If you're also
+   validating disaster recovery here (recommended, same reasoning as
+   everything else in this runbook), run the full
+   `scripts/checkpoint.sh` -> `consolidate-checkpoint.sh` ->
+   `verify-restore.sh` chain across all 5 nodes -- see
+   `DISASTER_RECOVERY.md`.
 6. **App connectivity**: point `backend/.env` `CASSANDRA_HOSTS` at 2-3 of
    the private IPs (not just one — so the driver has a live contact point
    even if node 1 happens to be down when the app starts),

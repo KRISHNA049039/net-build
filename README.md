@@ -26,8 +26,10 @@ casssndra/            Cassandra cluster setup (Docker Compose)
   docker-compose.cluster.yml    single-node dev cluster
   dis/                           multi-node (5-node, 2-rack) LAN cluster + RUNBOOK.md
   cassandra/                     schema.sql / seed.sql / seed_data.py
-  scripts/                       repair.sh / backup.sh / create-app-roles.sh
-  RECOVERY.md                    replication/repair/backup/restore
+  scripts/                       repair.sh / checkpoint.sh / consolidate-checkpoint.sh /
+                                    verify-restore.sh / create-app-roles.sh
+  RECOVERY.md                    node/rack fault tolerance: replication/repair/backup/restore
+  DISASTER_RECOVERY.md           whole-cluster loss: checkpoints, watermarks, rebuild runbook
   AUTH.md                        PasswordAuthenticator bootstrap, per-service roles
   AWS_RUNBOOK.md                 validate the cluster on AWS before the airgapped one
 
@@ -103,3 +105,7 @@ bash scripts/test_merge_smoke.sh          # curl-only smoke test, no Python deps
 - [logging/CENTRALIZED_LOGGING.md](logging/CENTRALIZED_LOGGING.md) —
   searchable logs across either architecture, plus a recap of Cassandra
   replication/restoration (full detail in `casssndra/RECOVERY.md`).
+- [AIRGAP_TESTING.md](AIRGAP_TESTING.md) — how to prove this whole stack
+  needs zero internet, on a single connected machine, before it goes
+  anywhere near the airgapped PCs; plus the pre-transfer checklist
+  (images, Python deps, secrets, clock sync).

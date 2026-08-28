@@ -168,9 +168,11 @@ survive things going wrong" alongside logging:
 - **Repair**: hinted handoff only covers outages under ~3h; anything
   longer needs `casssndra/scripts/repair.sh`, run weekly per node,
   staggered so the 5 nodes don't repair simultaneously.
-- **Backup/restore**: `casssndra/scripts/backup.sh` snapshots + exports
-  a tarball per node; restore procedure and dead-node replacement
-  (`replace_address_first_boot`) are both in `RECOVERY.md`.
+- **Backup/restore**: `casssndra/scripts/checkpoint.sh` snapshots +
+  exports a tarball per node; restore procedure and dead-node
+  replacement (`replace_address_first_boot`) are both in `RECOVERY.md`.
+  Whole-cluster loss (checkpoints, watermarks, rebuild runbook) is
+  `casssndra/DISASTER_RECOVERY.md`.
 
 **Not currently wired into this logging stack**: Cassandra's own
 container logs (gossip, compaction, GC) aren't shipped to Loki yet —

@@ -58,12 +58,14 @@ longer than the hint window, or restoring from a snapshot.
 
 ## Backup / restore
 
-**Backup** (`scripts/backup.sh <container-name> [backup-dir]`): snapshots
-every keyspace via `nodetool snapshot`, tars it out of the container, then
-clears the on-node snapshot. Copy the resulting tarball off the host
-immediately (rsync to a separate backup host on the airgapped LAN, `aws
-s3 cp` for the AWS test) -- until you do, it's on the same disk as the
-live data and isn't a real backup yet.
+**Backup** (`scripts/checkpoint.sh <container-name> [backup-dir] [tag]`):
+snapshots every keyspace via `nodetool snapshot`, tars it out of the
+container, hashes it, and writes a watermark record, then clears the
+on-node snapshot. Set `CHECKPOINT_REMOTE` to push it off the host
+automatically -- until you do, it's on the same disk as the live data
+and isn't a real backup yet. This is single-node backup/restore; for
+losing the *whole* cluster (checkpoints + the watermark/completeness
+model + a rebuild runbook), see [`DISASTER_RECOVERY.md`](DISASTER_RECOVERY.md).
 
 **Restore** a single node from a snapshot tarball:
 
