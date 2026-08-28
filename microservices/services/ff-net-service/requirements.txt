@@ -1,0 +1,19 @@
+# Portable pip requirements for this service. The monolith's
+# backend/requirements.lock.txt is a conda lockfile pinned to local build-cache
+# paths (D:\bld\..., /home/conda/...) -- not installable via `pip install -r`
+# anywhere but that exact machine, so it isn't reused here. Versions below
+# match backend/environment.yml where a Cassandra/Django app actually needs
+# the package (that file also lists a long tail of unrelated conda deps --
+# elasticsearch, fastavro, geomet, hdfs, pyarrow -- nothing in this codebase
+# imports them; skipped here as vestigial).
+Django==5.2.15
+djangorestframework==3.17.2
+django-cors-headers==4.9.0
+drf-spectacular==0.30.0
+cassandra-driver==3.30.1
+waitress==3.0.2
+python-dotenv==1.2.2
+prometheus-client==0.21.1
+# net_building.py/net_merging.py (the pure algorithm modules) operate on
+# DataFrames -- not needed by catalog-service.
+pandas==3.0.5
