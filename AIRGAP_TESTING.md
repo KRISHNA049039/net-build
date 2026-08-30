@@ -9,10 +9,13 @@ gather/fix/generate ahead of time so the physical transfer isn't where
 you discover a gap.
 
 This assumes you've read [`casssndra/RECOVERY.md`](casssndra/RECOVERY.md),
-[`casssndra/AUTH.md`](casssndra/AUTH.md), and
-[`logging/CENTRALIZED_LOGGING.md`](logging/CENTRALIZED_LOGGING.md) — this
-doc is "how do I know all of that actually works with the network cable
-pulled," not a repeat of what's in them.
+[`casssndra/AUTH.md`](casssndra/AUTH.md),
+[`logging/CENTRALIZED_LOGGING.md`](logging/CENTRALIZED_LOGGING.md), and
+[`OBSERVABILITY_STACK.md`](OBSERVABILITY_STACK.md) — this doc is "how do I
+know all of that actually works with the network cable pulled," not a
+repeat of what's in them. For the bigger picture — where this test fits
+in the overall path from a connected machine to running airgapped PCs —
+see [`AIRGAP_SETUP.md`](AIRGAP_SETUP.md).
 
 ---
 
@@ -35,7 +38,7 @@ in Grafana, does everything come up from cold with zero internet access.
 casssndra/docker-compose.cluster.yml   5-node Cassandra ring
 microservices/docker-compose.yml       catalog-service + ff-net-service + Kong + promtail
   (or backend/ run directly instead, if you're testing the monolith path)
-logging/docker-compose.yml             loki + grafana
+logging/docker-compose.yml             loki + grafana + prometheus
 ```
 
 ### Step 1 — Actually cut off the internet for the test
@@ -118,16 +121,23 @@ docker compose up -d
 4. **Logs show up in Grafana**: `http://localhost:3000` → Explore → Loki
    → `{service="catalog-service"}` — confirms Promtail found the log
    volumes and Loki ingested them, all without internet.
-5. **Repair + checkpoint scripts run clean**: `casssndra/scripts/repair.sh
+5. **Metrics + dashboard work**: `http://localhost:9090/api/v1/targets`
+   shows `catalog-service`/`ff-net-service` as `up`; the "Microservices
+   Overview" Grafana dashboard renders all its panels (request rate,
+   p95 latency, `cassandra_up`, logs) with real data — confirms
+   Prometheus's pull-based scraping and Grafana's file-provisioned
+   dashboard both work without reaching anything external. See
+   `OBSERVABILITY_STACK.md` if any panel comes back empty.
+6. **Repair + checkpoint scripts run clean**: `casssndra/scripts/repair.sh
    cassandra-1`, `scripts/checkpoint.sh cassandra-1` — confirms `nodetool`
    works against the now-authenticated cluster. See
    `casssndra/DISASTER_RECOVERY.md` for the full checkpoint/watermark
    model and whole-cluster rebuild runbook.
-6. **Kill a node**: `docker stop cassandra-3`, confirm the app keeps
+7. **Kill a node**: `docker stop cassandra-3`, confirm the app keeps
    answering (LOCAL_QUORUM, 2 of 3 replicas still up), `docker start
    cassandra-3`, confirm it rejoins as `UN` on its own.
 
-If all 6 pass with the network cable out, the *software* is airgap-ready.
+If all 7 pass with the network cable out, the *software* is airgap-ready.
 Part 2 is what's left — the stuff that's about the transfer itself, not
 the code.
 
@@ -147,6 +157,7 @@ kong:3.7
 grafana/loki:3.1.1
 grafana/grafana:11.2.0
 grafana/promtail:3.1.1
+prom/prometheus:v2.55.1
 python:3.11-slim          (base image for both microservices' Dockerfiles)
 ```
 ```bash

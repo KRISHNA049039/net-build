@@ -112,6 +112,9 @@ bash scripts/test_merge_smoke.sh          # curl-only smoke test, no Python deps
 - [OBSERVABILITY_STACK.md](OBSERVABILITY_STACK.md) — how Kong, Loki,
   Prometheus, and Grafana actually work and interact (push vs. pull,
   what each one stores, end-to-end request trace, verification commands).
+- [AIRGAP_SETUP.md](AIRGAP_SETUP.md) — the step-by-step strategy for
+  going from a connected machine to running airgapped PCs: every image/
+  tool to download, in what order, and where each other doc fits in.
 - [AIRGAP_TESTING.md](AIRGAP_TESTING.md) — how to prove this whole stack
   needs zero internet, on a single connected machine, before it goes
   anywhere near the airgapped PCs; plus the pre-transfer checklist
