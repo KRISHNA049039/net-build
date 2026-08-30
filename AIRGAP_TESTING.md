@@ -182,6 +182,34 @@ else here is Docker-image-based. Grab it on the connected machine and
 carry it over with everything else; don't assume it's already on the
 airgapped host.
 
+**Which build:** these scripts run in a bash shell on the host itself
+(`command -v jq`, not inside a container), so grab the Windows build —
+`jq-windows-amd64.exe` — for a Windows airgapped PC. "amd64" here just
+means "standard 64-bit x86," true for both Intel and AMD chips (Windows
+itself reports this as `PROCESSOR_ARCHITECTURE=AMD64`, check with
+`$env:PROCESSOR_ARCHITECTURE` on the target PC — `ARM64` instead would
+mean a rare ARM-based Windows machine, needing `jq-windows-arm64.exe`).
+Rename the download to `jq.exe`.
+
+**Where to put it:** pick a folder you own, not `C:\Program Files\...`
+(needs admin rights you may not have on the airgapped box). Check what's
+already on `PATH` first:
+```powershell
+$env:Path -split ';' | Where-Object { $_ -like "*$env:USERNAME*" }
+```
+If nothing user-owned shows up, create one and register it on the User
+PATH (no admin required):
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.local\bin"
+[Environment]::SetEnvironmentVariable(
+  "Path",
+  "$([Environment]::GetEnvironmentVariable('Path','User'));$env:USERPROFILE\.local\bin",
+  "User"
+)
+```
+Close and reopen the shell (PATH changes don't apply to an already-open
+one), drop `jq.exe` into that folder, then confirm with `jq --version`.
+
 ### Python dependencies — no `pip install` reaching PyPI
 
 **Microservices** (`requirements.txt`, plain pip):
