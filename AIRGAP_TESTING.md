@@ -158,20 +158,63 @@ grafana/loki:3.1.1
 grafana/grafana:11.2.0
 grafana/promtail:3.1.1
 prom/prometheus:v2.55.1
-python:3.11-slim          (base image for both microservices' Dockerfiles)
 ```
+Plus the two **built** microservice images (these already contain
+`python:3.11-slim` and every `pip` dependency baked in as layers — save
+these instead of the bare base image, so nothing needs rebuilding or
+`pip install`-ing on the airgapped side):
+```
+net_build_microservices-catalog-service:latest
+net_build_microservices-ff-net-service:latest
+```
+
+**Save every image to a tarball, on the connected machine**, plus a
+checksum manifest to catch a corrupted transfer before it becomes a
+confusing on-site failure:
 ```bash
-docker pull <image>          # for each, on the connected machine
-docker save <image> -o <name>.tar
-# ... transfer the .tar files to the airgapped side by whatever physical
-# media your process uses ...
-docker load -i <name>.tar    # on each airgapped host that needs it
+mkdir -p images && cd images
+
+declare -A images=(
+  ["cassandra_5.0.7-bookworm"]="cassandra:5.0.7-bookworm"
+  ["cassandra-web_v1.1.5"]="ipushc/cassandra-web:v1.1.5"
+  ["kong_3.7"]="kong:3.7"
+  ["loki_3.1.1"]="grafana/loki:3.1.1"
+  ["grafana_11.2.0"]="grafana/grafana:11.2.0"
+  ["promtail_3.1.1"]="grafana/promtail:3.1.1"
+  ["prometheus_v2.55.1"]="prom/prometheus:v2.55.1"
+  ["catalog-service_latest"]="net_build_microservices-catalog-service:latest"
+  ["ff-net-service_latest"]="net_build_microservices-ff-net-service:latest"
+)
+for name in "${!images[@]}"; do
+  docker save "${images[$name]}" -o "${name}.tar"
+done
+
+sha256sum *.tar > SHA256SUMS.txt
 ```
-**Practice this on the single-machine rig**: `docker save` every image
-above, `docker rmi` them, `docker load` back from the tarball, confirm
-`docker compose up` still works with zero pulls. That's the actual
-transfer mechanism you'll use for real — cheaper to find a broken image
-tarball now than on-site.
+
+**Verify each tarball is a valid archive** before trusting it (doesn't
+touch the Docker image store, safe to run even while the images are
+backing running containers):
+```bash
+for f in *.tar; do tar -tf "$f" > /dev/null 2>&1 && echo "OK $f" || echo "BAD $f"; done
+```
+
+**On the airgapped side**, after copying the whole `images/` folder over:
+```bash
+cd images
+sha256sum -c SHA256SUMS.txt        # confirm nothing got corrupted in transit
+for f in *.tar; do docker load -i "$f"; done
+```
+`docker load` restores each image under its original tag, so every
+`docker-compose.yml` in the repo finds it as-is — no `docker pull`/
+`--build` needed on that side.
+
+**Practice the full round-trip on the single-machine rig first**: after
+saving and verifying as above, `docker rmi` the images (only if nothing
+is currently running from them — stop those containers first), `docker
+load` them back from the tarballs, confirm `docker compose up` still
+works with zero pulls. That's the actual transfer mechanism you'll use
+for real — cheaper to find a broken image tarball now than on-site.
 
 ### Host tools — vendored, not just installed here
 
